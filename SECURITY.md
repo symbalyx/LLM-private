@@ -776,3 +776,20 @@ Pas besoin de rebuild : `docker compose restart ui` (ou recharger la page).
 
 Tous les flux restent locaux. Aucun port n'est exposé sur Internet.
 Le chiffrement Megolm (messages) et PerParticipantE2EE (média) s'effectue dans le navigateur ; les serveurs ne relayent que du chiffré.
+
+
+---
+
+## Patch UI social v2
+
+L'interface custom Symbalyx se lance sur `http://localhost:8090` depuis le PC, ou `http://IP_DU_PC:8090` depuis un téléphone du même Wi-Fi.
+
+Attention : `http://localhost:8080` ouvre Element Web brut. C'est utile comme secours technique, mais son interface est plus fade et moins personnalisée. Pour l'UI Symbalyx améliorée, utilisez le port `8090`.
+
+Ce patch améliore surtout :
+- sidebar façon messagerie moderne, plus lisible ;
+- cartes de conversation plus nettes ;
+- anneaux d'avatar et profil inspirés des codes sociaux modernes ;
+- header de chat plus clair ;
+- menu profil plus premium ;
+- cache PWA mis à jour en `app-cache-v6-social-ui`.

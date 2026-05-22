@@ -1,13 +1,56 @@
-FROM python:3.12-slim
+# Symbalyx Assistant IA — mémoire longue, HTML et patchs
 
-# libolm est requis pour le chiffrement E2E Matrix (Megolm)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libolm-dev gcc python3-dev cmake build-essential \
-    && rm -rf /var/lib/apt/lists/*
+Ce bot Matrix reste local : il utilise Synapse + Matrix E2E + Ollama.
 
-WORKDIR /app
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+## Ce qui a été ajouté
 
-COPY assistant.py /app/
-CMD ["python", "-u", "/app/assistant.py"]
+- Mémoire long terme en Markdown, lisible comme un vault Obsidian.
+- Index `index.jsonl` pour rechercher vite.
+- Mémoire automatique des décisions/projets/bugs importants.
+- Commandes `!remember`, `!recall`, `!learn`, `!feedback`, `!obsidian`.
+- Génération de fichiers `.html` propres via `!html`.
+- Diagnostic et patch de bugs via `!patch`.
+- Persona `devweb` pour HTML/CSS/JS/debug.
+
+## Où sont les fichiers
+
+Dans le volume Docker :
+
+```txt
+matrix/data/assistant_bot/
+  store/          # store Matrix nio + state court
+  memory/         # vault Markdown long terme
+  generated/
+    html/         # fichiers HTML générés
+    patches/      # patchs/debugs sauvegardés
+```
+
+## Commandes
+
+```txt
+!help
+!persona devweb
+!remember <info durable>
+!recall <recherche>
+!memories 10
+!learn <règle réutilisable>
+!feedback <correction à retenir>
+!html <brief de page/site>
+!patch <erreur console ou code>
+!summary 50
+!forget
+```
+
+## Exemples
+
+```txt
+!learn Quand Arsène demande un site, préserver l'existant et patcher précisément au lieu de repartir de zéro.
+
+!html page d'accueil premium pour tatoueur blackwork, mobile-first, galerie, CTA réservation
+
+!patch Uncaught ReferenceError: markMissing is not defined
+```
+
+## Limite honnête
+
+Le bot ne réentraîne pas les poids du modèle Ollama. Il "s'améliore" parce qu'il conserve des règles, décisions, bugs et préférences dans un vault local, puis les réinjecte dans le contexte des prochaines réponses.

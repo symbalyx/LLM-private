@@ -1,99 +1,45 @@
+server {
+    listen       80;
+    server_name  _;
 
-# ===========================================================
-#  Symbalyx — overrides v2
-#  Ajoute : MatrixRTC focus (Element Call), retention server,
-#  TURN refresh, et durcissement supplémentaire.
-#  À appender à data/synapse/homeserver.yaml.
-# ===========================================================
+    # Pas de logs d'accès (vie privée)
+    access_log off;
+    error_log /var/log/nginx/error.log warn;
 
-public_baseurl: "http://localhost:8008"
+    # Cache les en-têtes de version
+    server_tokens off;
 
-# --- MatrixRTC : annonce le focus LiveKit via .well-known ---
-extra_well_known_client_content:
-  org.matrix.msc4143.rtc_foci:
-    - type: livekit
-      livekit_service_url: "http://localhost:8881"
+    # Sécurité de base
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
 
-# --- Rétention des messages (côté serveur) ---
-# Active la politique m.room.retention : les events plus
-# vieux que max_lifetime sont purgés automatiquement.
-retention:
-  enabled: true
-  default_policy:
-    min_lifetime: 5m
-    max_lifetime: 30d
-  allowed_lifetime_min: 5m
-  allowed_lifetime_max: 365d
-  purge_jobs:
-    - interval: 1h
+    root   /usr/share/nginx/html;
+    index  index.html;
 
-# --- Messages éphémères côté client (Element labs) ---
-# Le client envoie des events avec un flag d'expiration.
-# La feature 'feature_disappearing_messages' d'Element s'en charge.
+    # Effacement global du storage (Clear-Site-Data)
+    location = /wipe {
+        add_header Clear-Site-Data '"cache", "cookies", "storage", "executionContexts"' always;
+        return 200 "Wiped";
+    }
 
-# --- Tweaks sécurité / vie privée ---
-allow_public_rooms_without_auth: false
-allow_public_rooms_over_federation: false
-require_auth_for_profile_requests: true
-limit_profile_requests_to_users_who_share_rooms: true
+    # Service worker doit être servi avec le bon MIME
+    location = /service-worker.js {
+        add_header Service-Worker-Allowed "/" always;
+        types { application/javascript js; }
+        try_files $uri =404;
+    }
 
-# (Présence configurée plus bas)
+    # Proxy vers Ollama (LLM local) pour résumés d'appels et UI assistant.
+    # Évite d'exposer le port 11434 sur le LAN ; la UI passe par /ollama/.
+    location /ollama/ {
+        proxy_pass http://ollama:11434/;
+        proxy_set_header Host $host;
+        proxy_read_timeout 600s;
+        proxy_buffering off;
+    }
 
-# Désactive l'indexation des utilisateurs dans le user_directory
-# (sauf pour les membres de salons communs)
-user_directory:
-  enabled: true
-  search_all_users: false
-  prefer_local_users: true
-
-# Pas d'écoute publique pour la fédération (on n'est pas fédéré)
-federation_sender_instances: []
-
-# Forcer les nouveaux salons en chiffré + history limited
-default_power_level_content_override:
-  private_chat:
-    events:
-      "im.vector.modular.widgets": 50
-      "m.room.history_visibility": 50
-  trusted_private_chat:
-    events:
-      "im.vector.modular.widgets": 50
-
-# Redactions : purger les versions originales
-redaction_retention_period: 7d
-
-# Devices inactifs : nettoyer au bout d'1 semaine
-delete_stale_devices_after: 7d
-
-# Pas de tracking / métriques
-enable_metrics: false
-
-# Pas de logs verbeux dans les events (les contenus restent en clair en JSON,
-# mais on supprime les redactions et les events forgotten)
-forgotten_room_retention_period: 7d
-
-# Désactive l'URL preview côté serveur (le serveur ne télécharge plus rien)
-url_preview_enabled: false
-
-# Désactive l'envoi automatique de mails (pas de relai SMTP)
-email:
-  notif_for_new_users: false
-
-# --- Caches / perf pour 10 users ---
-caches:
-  global_factor: 1.0
-
-# --- Présence (statut en ligne / dernière activité) ---
-# Activée pour permettre l'indicateur "en ligne" dans la liste de contacts.
-# Tradeoff documenté dans SECURITY.md : les membres voient grossièrement
-# quand un autre membre est connecté. Pour passer invisible, mode "discret"
-# dans le menu profil.
-presence:
-  enabled: true
-
-# --- Plafond des pièces jointes (chiffrées avant upload) ---
-# 250 Mo : couvre des vidéos, archives volumineuses, etc.
-max_upload_size: 250M
-
-# --- Désactive l'envoi de stats anonymes ---
-report_stats: false
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

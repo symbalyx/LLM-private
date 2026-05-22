@@ -1,21 +1,8 @@
-{
-  "name": "Calculatrice",
-  "short_name": "Calc",
-  "description": "Calculatrice",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#000000",
-  "theme_color": "#000000",
-  "lang": "fr",
-  "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ],
-  "categories": ["utilities"]
-}
+# Symbalyx Matrix IA
+ASSISTANT_BOT_PASSWORD=ChangeMoiAssistant2026
+OLLAMA_MODEL=llama3.2:3b
+
+# Mémoire longue façon Obsidian
+ASSISTANT_AUTO_MEMORY=true
+ASSISTANT_MAX_TURNS=12
+ASSISTANT_MAX_RECALL=6

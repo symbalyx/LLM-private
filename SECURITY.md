@@ -83,8 +83,8 @@ database:
 
 ```yaml
 # === Symbalyx base overrides ===
-enable_registration: false
-enable_registration_without_verification: false
+enable_registration: true
+enable_registration_without_verification: true
 password_config:
   enabled: true
 
@@ -172,9 +172,12 @@ curl http://localhost:8881/healthz        # OK (lk-jwt-service)
 
 ---
 
-## ÉTAPE 5 — Créer les 10 comptes utilisateurs
+## ÉTAPE 5 — Créer les comptes utilisateurs
 
-L'enregistrement public est désactivé : on crée chaque compte via la CLI admin du conteneur.
+La UI Symbalyx permet maintenant de créer un compte depuis l'écran **Première connexion**.
+Pour que ce bouton fonctionne, vérifiez que `enable_registration: true` et `enable_registration_without_verification: true` sont bien présents dans `data/synapse/homeserver.yaml` après application des overrides.
+
+Option alternative plus verrouillée : créer les comptes via la CLI admin du conteneur.
 
 ```powershell
 # Admin
@@ -201,6 +204,8 @@ docker exec -it symbalyx_synapse register_new_matrix_user -u iris   -p MotDePass
 | URL                          | Quoi                          |
 | ---------------------------- | ----------------------------- |
 | **`http://localhost:8090`**  | **UI custom Symbalyx**        |
+
+> Sur téléphone, utilisez `http://IP_DU_PC:8090` et non `localhost`. La UI détecte maintenant automatiquement l'IP utilisée pour appeler Matrix.
 | `http://localhost:8080`      | Element Web officiel          |
 | `http://localhost:8181`      | Element Call standalone       |
 | `http://localhost:8008`      | API Synapse                   |
@@ -259,11 +264,75 @@ Dans Symbalyx, ouvre une conversation → bouton **Membres** → **Inviter l'Ass
 | Commande | Effet |
 |---|---|
 | `!help` | Liste les commandes |
-| `!persona assistant\|secrétaire\|coach\|expert` | Change le ton et l'approche |
-| `!summary [N]` | Résume les N derniers messages (par défaut 30) |
-| `!notes <texte>` | Enregistre une note formattée |
-| `!forget` | Efface le contexte conversationnel pour cette conversation |
-| `<texte libre>` | Conversation normale, gardée en mémoire (10 derniers tours) |
+| `!persona assistant\|secrétaire\|coach\|expert\|devweb` | Change le ton et l'approche |
+| `!summary [N]` | Résume les N derniers messages |
+| `!remember <texte>` | Enregistre une mémoire durable |
+| `!recall <recherche>` | Recherche dans la mémoire long terme |
+| `!learn <texte>` | Ajoute une règle/leçon réutilisable |
+| `!feedback <texte>` | Corrige le comportement futur |
+| `!html <brief>` | Génère un fichier `.html` propre |
+| `!patch <bug/code>` | Diagnostic + patch/diff |
+| `!forget` | Efface le contexte court, pas la mémoire longue |
+| `<texte libre>` | Conversation normale avec mémoire récupérée |
+
+
+#### Mémoire longue façon Obsidian
+
+Le bot ne se limite plus aux 10 derniers messages. Il garde aussi une **mémoire long terme locale** dans :
+
+```txt
+matrix/data/assistant_bot/memory/
+```
+
+Structure créée automatiquement :
+
+```txt
+memory/
+  index.jsonl
+  rooms/<room_hash>/2026-05-22.md
+  global/lessons.md
+  global/feedback.md
+generated/
+  html/*.html
+  patches/*.md
+```
+
+Ces fichiers Markdown peuvent être ouverts comme un mini-vault Obsidian : notes par salon, tags `#html`, `#bugfix`, `#lesson`, liens `[[...]]` si tu en ajoutes dans les notes.
+
+**Nouvelles commandes utiles :**
+
+| Commande | Effet |
+|---|---|
+| `!remember <texte>` | Enregistre une mémoire durable manuelle |
+| `!recall <recherche>` | Recherche dans la mémoire long terme |
+| `!memories [N]` | Affiche les dernières mémoires de la conversation |
+| `!learn <texte>` | Enregistre une règle/leçon réutilisable |
+| `!feedback <texte>` | Corrige le comportement futur du bot |
+| `!obsidian` | Affiche les chemins du vault mémoire |
+| `!html <brief>` | Génère un vrai fichier `.html` autonome dans `generated/html/` |
+| `!patch <bug/code>` | Produit diagnostic + patch/diff, sauvegardé dans `generated/patches/` |
+| `!persona devweb` | Mode développeur web senior pour HTML/CSS/JS/debug |
+
+**Exemples :**
+
+```txt
+!learn Pour les sites Symbalyx, garder une UI premium sobre, moins chargée, mobile-first, sans aspect IA générique.
+!remember Le projet NAD utilise un éditeur local avec sauvegarde JSON via serveur Node.
+!recall NAD éditeur sauvegarde
+!html landing page premium pour studio web à Bordeaux, crème/bordeaux, CTA devis gratuit
+!patch Uncaught ReferenceError: markMissing is not defined dans index.html
+```
+
+**Auto-mémoire :**
+
+Par défaut, le bot essaie de mémoriser automatiquement les informations durables : décisions projet, bugs corrigés, préférences stables, règles de design/code. Il ne réentraîne pas le modèle ; il améliore ses réponses en récupérant ces mémoires dans le prompt.
+
+Pour désactiver :
+
+```env
+ASSISTANT_AUTO_MEMORY=false
+```
+
 
 **Résumé d'appel par l'IA** (au lieu de l'heuristique mots-clés) :
 

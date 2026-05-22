@@ -1,42 +1,42 @@
 server {
-    listen       80;
-    server_name  _;
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
 
-    # Pas de logs d'accès (vie privée)
+    root /app;
+    index index.html;
+
     access_log off;
-    error_log /var/log/nginx/error.log warn;
-
-    # Cache les en-têtes de version
     server_tokens off;
 
-    # Sécurité de base
     add_header Referrer-Policy "no-referrer" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
 
-    root   /usr/share/nginx/html;
-    index  index.html;
-
-    # Effacement global du storage (Clear-Site-Data)
-    location = /wipe {
-        add_header Clear-Site-Data '"cache", "cookies", "storage", "executionContexts"' always;
-        return 200 "Wiped";
-    }
-
-    # Service worker doit être servi avec le bon MIME
-    location = /service-worker.js {
-        add_header Service-Worker-Allowed "/" always;
-        types { application/javascript js; }
+    location = /config.json {
+        default_type application/json;
         try_files $uri =404;
     }
 
-    # Proxy vers Ollama (LLM local) pour résumés d'appels et UI assistant.
-    # Évite d'exposer le port 11434 sur le LAN ; la UI passe par /ollama/.
-    location /ollama/ {
-        proxy_pass http://ollama:11434/;
-        proxy_set_header Host $host;
-        proxy_read_timeout 600s;
-        proxy_buffering off;
+    location = /symbalyx-element-ui.css {
+        default_type text/css;
+        try_files $uri =404;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+    }
+
+    location = /symbalyx-element-ui.js {
+        default_type application/javascript;
+        try_files $uri =404;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+    }
+
+    # Injecte la surcouche UI Symbalyx dans Element Web.
+    # Sans ça, l'iframe reste Element brut et aucune refonte visuelle ne peut toucher le chat.
+    location = /index.html {
+        sub_filter_once off;
+        sub_filter_types text/html;
+        sub_filter '</head>' '<link rel="stylesheet" href="/symbalyx-element-ui.css?v=4"><script defer src="/symbalyx-element-ui.js?v=4"></script></head>';
+        try_files $uri =404;
     }
 
     location / {

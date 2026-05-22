@@ -1,106 +1,56 @@
+# Symbalyx Assistant IA — mémoire longue, HTML et patchs
 
-# ===========================================================
-#  Symbalyx — overrides v2
-#  Ajoute : MatrixRTC focus (Element Call), retention server,
-#  TURN refresh, et durcissement supplémentaire.
-#  À appender à data/synapse/homeserver.yaml.
-# ===========================================================
+Ce bot Matrix reste local : il utilise Synapse + Matrix E2E + Ollama.
 
-public_baseurl: "http://localhost:8008"
+## Ce qui a été ajouté
 
+- Mémoire long terme en Markdown, lisible comme un vault Obsidian.
+- Index `index.jsonl` pour rechercher vite.
+- Mémoire automatique des décisions/projets/bugs importants.
+- Commandes `!remember`, `!recall`, `!learn`, `!feedback`, `!obsidian`.
+- Génération de fichiers `.html` propres via `!html`.
+- Diagnostic et patch de bugs via `!patch`.
+- Persona `devweb` pour HTML/CSS/JS/debug.
 
-# --- Inscription locale depuis la UI Symbalyx ---
-# Nécessaire pour que le bouton "Créer mon compte" fonctionne.
-# À n'utiliser que sur un réseau privé / LAN non exposé publiquement.
-enable_registration: true
-enable_registration_without_verification: true
+## Où sont les fichiers
 
-# --- MatrixRTC : annonce le focus LiveKit via .well-known ---
-extra_well_known_client_content:
-  org.matrix.msc4143.rtc_foci:
-    - type: livekit
-      livekit_service_url: "http://localhost:8881"
+Dans le volume Docker :
 
-# --- Rétention des messages (côté serveur) ---
-# Active la politique m.room.retention : les events plus
-# vieux que max_lifetime sont purgés automatiquement.
-retention:
-  enabled: true
-  default_policy:
-    min_lifetime: 5m
-    max_lifetime: 30d
-  allowed_lifetime_min: 5m
-  allowed_lifetime_max: 365d
-  purge_jobs:
-    - interval: 1h
+```txt
+matrix/data/assistant_bot/
+  store/          # store Matrix nio + state court
+  memory/         # vault Markdown long terme
+  generated/
+    html/         # fichiers HTML générés
+    patches/      # patchs/debugs sauvegardés
+```
 
-# --- Messages éphémères côté client (Element labs) ---
-# Le client envoie des events avec un flag d'expiration.
-# La feature 'feature_disappearing_messages' d'Element s'en charge.
+## Commandes
 
-# --- Tweaks sécurité / vie privée ---
-allow_public_rooms_without_auth: false
-allow_public_rooms_over_federation: false
-require_auth_for_profile_requests: true
-limit_profile_requests_to_users_who_share_rooms: true
+```txt
+!help
+!persona devweb
+!remember <info durable>
+!recall <recherche>
+!memories 10
+!learn <règle réutilisable>
+!feedback <correction à retenir>
+!html <brief de page/site>
+!patch <erreur console ou code>
+!summary 50
+!forget
+```
 
-# (Présence configurée plus bas)
+## Exemples
 
-# Désactive l'indexation des utilisateurs dans le user_directory
-# (sauf pour les membres de salons communs)
-user_directory:
-  enabled: true
-  search_all_users: false
-  prefer_local_users: true
+```txt
+!learn Quand Arsène demande un site, préserver l'existant et patcher précisément au lieu de repartir de zéro.
 
-# Pas d'écoute publique pour la fédération (on n'est pas fédéré)
-federation_sender_instances: []
+!html page d'accueil premium pour tatoueur blackwork, mobile-first, galerie, CTA réservation
 
-# Forcer les nouveaux salons en chiffré + history limited
-default_power_level_content_override:
-  private_chat:
-    events:
-      "im.vector.modular.widgets": 50
-      "m.room.history_visibility": 50
-  trusted_private_chat:
-    events:
-      "im.vector.modular.widgets": 50
+!patch Uncaught ReferenceError: markMissing is not defined
+```
 
-# Redactions : purger les versions originales
-redaction_retention_period: 7d
+## Limite honnête
 
-# Devices inactifs : nettoyer au bout d'1 semaine
-delete_stale_devices_after: 7d
-
-# Pas de tracking / métriques
-enable_metrics: false
-
-# Pas de logs verbeux dans les events (les contenus restent en clair en JSON,
-# mais on supprime les redactions et les events forgotten)
-forgotten_room_retention_period: 7d
-
-# Désactive l'URL preview côté serveur (le serveur ne télécharge plus rien)
-url_preview_enabled: false
-
-# Désactive l'envoi automatique de mails (pas de relai SMTP)
-email:
-  notif_for_new_users: false
-
-# --- Caches / perf pour 10 users ---
-caches:
-  global_factor: 1.0
-
-# --- Présence (statut en ligne / dernière activité) ---
-# Activée pour permettre l'indicateur "en ligne" dans la liste de contacts.
-# Tradeoff documenté dans SECURITY.md : les membres voient grossièrement
-# quand un autre membre est connecté. Pour passer invisible, mode "discret"
-# dans le menu profil.
-presence:
-  enabled: true
-
-# --- Plafond des pièces jointes (chiffrées avant upload) ---
-# 250 Mo : couvre des vidéos, archives volumineuses, etc.
-max_upload_size: 250M
-
-# --- Désactive l'envoi de stats anonymes ---
-report_stats: false
+Le bot ne réentraîne pas les poids du modèle Ollama. Il "s'améliore" parce qu'il conserve des règles, décisions, bugs et préférences dans un vault local, puis les réinjecte dans le contexte des prochaines réponses.

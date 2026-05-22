@@ -1,44 +1,106 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="115" fill="#0a0a0a"/>
-  <rect x="96" y="64" width="320" height="384" rx="22" fill="#1c1c1e" stroke="#2c2c2e" stroke-width="2"/>
-  <rect x="120" y="92" width="272" height="84" rx="10" fill="#000"/>
-  <text x="372" y="156" font-family="-apple-system, Helvetica Neue, sans-serif" font-size="64" font-weight="200" fill="#fff" text-anchor="end">0</text>
-  <g fill="#ff9500">
-    <circle cx="356" cy="220" r="32"/>
-    <circle cx="356" cy="284" r="32"/>
-    <circle cx="356" cy="348" r="32"/>
-    <circle cx="356" cy="412" r="32"/>
-  </g>
-  <g fill="#a5a5a5">
-    <circle cx="156" cy="220" r="32"/>
-    <circle cx="220" cy="220" r="32"/>
-    <circle cx="284" cy="220" r="32"/>
-  </g>
-  <g fill="#333">
-    <circle cx="156" cy="284" r="32"/>
-    <circle cx="220" cy="284" r="32"/>
-    <circle cx="284" cy="284" r="32"/>
-    <circle cx="156" cy="348" r="32"/>
-    <circle cx="220" cy="348" r="32"/>
-    <circle cx="284" cy="348" r="32"/>
-    <rect x="124" y="380" width="128" height="64" rx="32"/>
-    <circle cx="284" cy="412" r="32"/>
-  </g>
-  <g fill="#fff" font-family="-apple-system, Helvetica Neue, sans-serif" font-weight="400" text-anchor="middle">
-    <text x="356" y="231" font-size="32">÷</text>
-    <text x="356" y="295" font-size="32">×</text>
-    <text x="356" y="359" font-size="32">−</text>
-    <text x="356" y="423" font-size="32">+</text>
-    <text x="156" y="231" fill="#000" font-size="26">AC</text>
-    <text x="220" y="231" fill="#000" font-size="26">±</text>
-    <text x="284" y="231" fill="#000" font-size="26">%</text>
-    <text x="156" y="297" font-size="28">7</text>
-    <text x="220" y="297" font-size="28">8</text>
-    <text x="284" y="297" font-size="28">9</text>
-    <text x="156" y="361" font-size="28">4</text>
-    <text x="220" y="361" font-size="28">5</text>
-    <text x="284" y="361" font-size="28">6</text>
-    <text x="156" y="425" font-size="28">0</text>
-    <text x="284" y="425" font-size="28">,</text>
-  </g>
-</svg>
+
+# ===========================================================
+#  Symbalyx — overrides v2
+#  Ajoute : MatrixRTC focus (Element Call), retention server,
+#  TURN refresh, et durcissement supplémentaire.
+#  À appender à data/synapse/homeserver.yaml.
+# ===========================================================
+
+public_baseurl: "http://localhost:8008"
+
+
+# --- Inscription locale depuis la UI Symbalyx ---
+# Nécessaire pour que le bouton "Créer mon compte" fonctionne.
+# À n'utiliser que sur un réseau privé / LAN non exposé publiquement.
+enable_registration: true
+enable_registration_without_verification: true
+
+# --- MatrixRTC : annonce le focus LiveKit via .well-known ---
+extra_well_known_client_content:
+  org.matrix.msc4143.rtc_foci:
+    - type: livekit
+      livekit_service_url: "http://localhost:8881"
+
+# --- Rétention des messages (côté serveur) ---
+# Active la politique m.room.retention : les events plus
+# vieux que max_lifetime sont purgés automatiquement.
+retention:
+  enabled: true
+  default_policy:
+    min_lifetime: 5m
+    max_lifetime: 30d
+  allowed_lifetime_min: 5m
+  allowed_lifetime_max: 365d
+  purge_jobs:
+    - interval: 1h
+
+# --- Messages éphémères côté client (Element labs) ---
+# Le client envoie des events avec un flag d'expiration.
+# La feature 'feature_disappearing_messages' d'Element s'en charge.
+
+# --- Tweaks sécurité / vie privée ---
+allow_public_rooms_without_auth: false
+allow_public_rooms_over_federation: false
+require_auth_for_profile_requests: true
+limit_profile_requests_to_users_who_share_rooms: true
+
+# (Présence configurée plus bas)
+
+# Désactive l'indexation des utilisateurs dans le user_directory
+# (sauf pour les membres de salons communs)
+user_directory:
+  enabled: true
+  search_all_users: false
+  prefer_local_users: true
+
+# Pas d'écoute publique pour la fédération (on n'est pas fédéré)
+federation_sender_instances: []
+
+# Forcer les nouveaux salons en chiffré + history limited
+default_power_level_content_override:
+  private_chat:
+    events:
+      "im.vector.modular.widgets": 50
+      "m.room.history_visibility": 50
+  trusted_private_chat:
+    events:
+      "im.vector.modular.widgets": 50
+
+# Redactions : purger les versions originales
+redaction_retention_period: 7d
+
+# Devices inactifs : nettoyer au bout d'1 semaine
+delete_stale_devices_after: 7d
+
+# Pas de tracking / métriques
+enable_metrics: false
+
+# Pas de logs verbeux dans les events (les contenus restent en clair en JSON,
+# mais on supprime les redactions et les events forgotten)
+forgotten_room_retention_period: 7d
+
+# Désactive l'URL preview côté serveur (le serveur ne télécharge plus rien)
+url_preview_enabled: false
+
+# Désactive l'envoi automatique de mails (pas de relai SMTP)
+email:
+  notif_for_new_users: false
+
+# --- Caches / perf pour 10 users ---
+caches:
+  global_factor: 1.0
+
+# --- Présence (statut en ligne / dernière activité) ---
+# Activée pour permettre l'indicateur "en ligne" dans la liste de contacts.
+# Tradeoff documenté dans SECURITY.md : les membres voient grossièrement
+# quand un autre membre est connecté. Pour passer invisible, mode "discret"
+# dans le menu profil.
+presence:
+  enabled: true
+
+# --- Plafond des pièces jointes (chiffrées avant upload) ---
+# 250 Mo : couvre des vidéos, archives volumineuses, etc.
+max_upload_size: 250M
+
+# --- Désactive l'envoi de stats anonymes ---
+report_stats: false

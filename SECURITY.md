@@ -27,6 +27,43 @@ chiffrement E2E natif (Megolm + MatrixRTC), jusqu'à 10 utilisateurs.
 
 ---
 
+## UI sociale + Bots IA visibles
+
+La belle interface Symbalyx est sur le port `8090` :
+
+```txt
+http://localhost:8090
+```
+
+Sur téléphone, utilisez l'IP du PC :
+
+```txt
+http://IP_DU_PC:8090
+```
+
+Le port `8080` ouvre Element Web brut. Il sert de secours technique, mais l'interface est volontairement plus basique.
+
+### Faire apparaître les bots IA
+
+Dans l'UI `8090`, les profils IA sont visibles dans la sidebar : Dev Web, Debug, Mémoire et Résumé. Pour avoir aussi un vrai bot Matrix dans les salons, lancez :
+
+```powershell
+cd matrix
+.\scripts\setup-ai.ps1
+```
+
+Puis ouvrez un salon et cliquez **Inviter IA**. Le bot `@assistant:localhost` accepte les invitations et répond aux commandes :
+
+```txt
+!help
+!remember <fait à retenir>
+!recall <recherche>
+!learn <règle>
+!html <brief>
+!patch <bug ou code>
+```
+
+
 ## Prérequis
 
 - Windows 10/11

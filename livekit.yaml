@@ -1,56 +1,28 @@
-# Symbalyx Assistant IA — mémoire longue, HTML et patchs
+# Symbalyx Matrix — UI v4 hard patch
 
-Ce bot Matrix reste local : il utilise Synapse + Matrix E2E + Ollama.
+Cette version corrige le vrai problème vu à l'écran : le chat central était encore Element Web dans une iframe. La surcouche précédente modifiait surtout l'extérieur, mais l'intérieur de l'iframe restait fade.
 
-## Ce qui a été ajouté
+Le patch ajoute une injection contrôlée dans le conteneur Element :
 
-- Mémoire long terme en Markdown, lisible comme un vault Obsidian.
-- Index `index.jsonl` pour rechercher vite.
-- Mémoire automatique des décisions/projets/bugs importants.
-- Commandes `!remember`, `!recall`, `!learn`, `!feedback`, `!obsidian`.
-- Génération de fichiers `.html` propres via `!html`.
-- Diagnostic et patch de bugs via `!patch`.
-- Persona `devweb` pour HTML/CSS/JS/debug.
+- `element/nginx.conf` injecte `symbalyx-element-ui.css` et `symbalyx-element-ui.js` dans Element Web.
+- `element/symbalyx-element-ui.css` applique un skin plus premium : sidebar, header, timeline, composer, avatars.
+- `element/symbalyx-element-ui.js` ajoute un panneau visible `Bots IA` dans Element avec Dev Web, Debug, Mémoire et Résumé.
 
-## Où sont les fichiers
+Après application :
 
-Dans le volume Docker :
-
-```txt
-matrix/data/assistant_bot/
-  store/          # store Matrix nio + state court
-  memory/         # vault Markdown long terme
-  generated/
-    html/         # fichiers HTML générés
-    patches/      # patchs/debugs sauvegardés
+```powershell
+docker compose down
+docker compose up -d --build --force-recreate
 ```
 
-## Commandes
+Puis ouvrir en navigation privée ou vider le cache :
 
 ```txt
-!help
-!persona devweb
-!remember <info durable>
-!recall <recherche>
-!memories 10
-!learn <règle réutilisable>
-!feedback <correction à retenir>
-!html <brief de page/site>
-!patch <erreur console ou code>
-!summary 50
-!forget
+http://localhost:8090
 ```
 
-## Exemples
+Si le bot n'apparaît pas, lancer le profil IA :
 
-```txt
-!learn Quand Arsène demande un site, préserver l'existant et patcher précisément au lieu de repartir de zéro.
-
-!html page d'accueil premium pour tatoueur blackwork, mobile-first, galerie, CTA réservation
-
-!patch Uncaught ReferenceError: markMissing is not defined
+```powershell
+docker compose --profile ia up -d --build assistant_bot
 ```
-
-## Limite honnête
-
-Le bot ne réentraîne pas les poids du modèle Ollama. Il "s'améliore" parce qu'il conserve des règles, décisions, bugs et préférences dans un vault local, puis les réinjecte dans le contexte des prochaines réponses.
